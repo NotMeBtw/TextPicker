@@ -21,6 +21,8 @@ import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.JsonHttpResponseHandler;
 import com.loopj.android.http.RequestParams;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
@@ -130,7 +132,26 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "Success!", Toast.LENGTH_LONG).show();
 
 //                mJSONAdapter.updateData(jsonObject.optJSONArray("docs"));
-                textView.setText(jsonObject.toString());
+
+                String response = "";
+                try {
+                    JSONArray regions = jsonObject.getJSONArray("regions");
+                    JSONObject jo = regions.getJSONObject(0);
+                    JSONArray lines = jo.getJSONArray("lines");
+                    for (int i = 0; i < lines.length(); i++) {
+                        JSONObject line = lines.getJSONObject(i);
+                        JSONArray words = line.getJSONArray("words");
+                        for (int j = 0; j < words.length(); j++) {
+                            JSONObject word = words.getJSONObject(j);
+                            String text = word.getString("text");
+                            response += text + " ";
+                        }
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+                textView.setText(response);
             }
 
             @Override
@@ -138,13 +159,7 @@ public class MainActivity extends AppCompatActivity {
 
                 setProgressBarIndeterminateVisibility(false);
 
-                Toast.makeText(getApplicationContext(),
-                        "Error: "
-                                + statusCode
-                                + " "
-                                + throwable.getMessage(),
-                        Toast.LENGTH_LONG)
-                        .show();
+                Toast.makeText(getApplicationContext(), "Error: " + statusCode + " " + throwable.getMessage(), Toast.LENGTH_LONG).show();
 
                 Log.e("omg android", statusCode + " " + throwable.getMessage());
             }
