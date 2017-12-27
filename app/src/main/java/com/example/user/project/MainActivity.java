@@ -96,8 +96,8 @@ public class MainActivity extends AppCompatActivity {
         Log.e("path", "----------------" + picturePath);
 
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
-        photo = Bitmap.createScaledBitmap(photo, photo.getWidth() / 2, photo.getHeight() / 2, true);
-        photo.compress(Bitmap.CompressFormat.JPEG, 90, bao);
+        photo = Bitmap.createScaledBitmap(photo, photo.getWidth(), photo.getHeight(), true);
+        photo.compress(Bitmap.CompressFormat.JPEG, 100, bao);
         ba = bao.toByteArray();
         ba1 = Base64.encodeToString(ba, Base64.DEFAULT);
 
@@ -182,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             Bitmap photo = (Bitmap) data.getExtras().get("data");
-            ImageView imageView = (ImageView) findViewById(R.id.image);
+            ImageView imageView = (ImageView) findViewById(R.id.imageView);
             imageView.setImageBitmap(photo);
 
             upload(photo);
