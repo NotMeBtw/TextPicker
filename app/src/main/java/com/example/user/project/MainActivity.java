@@ -7,13 +7,17 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.ShareActionProvider;
 import android.util.Base64;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.ShareActionProvider;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,8 +33,10 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
 public class MainActivity extends AppCompatActivity {
+
     TextView textView;
     ImageView imageView;
+    ProgressBar progressBar;
     Button btpic, btnup;
     private Uri fileUri;
     String picturePath;
@@ -47,6 +53,12 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+//        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+//        setSupportProgressBarIndeterminateVisibility(false);
+
+        progressBar = (ProgressBar) findViewById(R.id.progress_spinner);
+        progressBar.setVisibility(View.INVISIBLE);
+
         textView = (TextView) findViewById(R.id.textView);
         imageView = (ImageView) findViewById(R.id.imageView);
 
@@ -60,37 +72,41 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-//    @Override
-//    public boolean onCreateOptionsMenu(Menu menu) {
-//        // Inflate the menu.
-//        // Adds items to the action bar if it is present.
-//        getMenuInflater().inflate(R.menu.menu, menu);
-//
-//        // Access the Share Item defined in menu XML
-//        MenuItem shareItem = menu.findItem(R.id.menu_item_share);
-//
-//        // Access the object responsible for
-//        // putting together the sharing submenu
-//        if (shareItem != null) {
-//            mShareActionProvider = (ShareActionProvider) shareItem.getActionProvider();
-//        }
-//
-//        // Create an Intent to share your content
-//        setShareIntent();
-//        return true;
-//    }
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu.
+        // Adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu, menu);
+
+        // Access the Share Item defined in menu XML
+        MenuItem shareItem = menu.findItem(R.id.menu_item_share);
+
+        try {
+            mShareActionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(shareItem);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // Create an Intent to share your content
+        setShareIntent();
+        return true;
+    }
 
     private void setShareIntent() {
 
         // create an Intent with the contents of the TextView
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setType("text/plain");
-        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Android Development");
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Text recognition");
         shareIntent.putExtra(Intent.EXTRA_TEXT, textView.getText());
 
         // Make sure the provider knows
         // it should work with that Intent
-        mShareActionProvider.setShareIntent(shareIntent);
+        try {
+            mShareActionProvider.setShareIntent(shareIntent);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void upload(Bitmap photo) {
@@ -115,7 +131,9 @@ public class MainActivity extends AppCompatActivity {
         AsyncHttpClient client = new AsyncHttpClient();
 
         // 11. start progress bar
-        setProgressBarIndeterminateVisibility(true);
+//        setProgressBarIndeterminateVisibility(true);
+
+        progressBar.setVisibility(View.VISIBLE);
 
         client.addHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
 
@@ -127,11 +145,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(JSONObject jsonObject) {
 
-                setProgressBarIndeterminateVisibility(false);
+//                setProgressBarIndeterminateVisibility(false);
+
+                progressBar.setVisibility(View.INVISIBLE);
 
                 Toast.makeText(getApplicationContext(), "Success!", Toast.LENGTH_LONG).show();
-
-//                mJSONAdapter.updateData(jsonObject.optJSONArray("docs"));
 
                 String response = "";
                 try {
@@ -152,16 +170,19 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 textView.setText(response);
+                setShareIntent();
             }
 
             @Override
             public void onFailure(int statusCode, Throwable throwable, JSONObject error) {
 
-                setProgressBarIndeterminateVisibility(false);
+//                setProgressBarIndeterminateVisibility(false);
+
+                progressBar.setVisibility(View.INVISIBLE);
 
                 Toast.makeText(getApplicationContext(), "Error: " + statusCode + " " + throwable.getMessage(), Toast.LENGTH_LONG).show();
 
-                Log.e("omg android", statusCode + " " + throwable.getMessage());
+                Log.e("HTTP POST ERROR", statusCode + " " + throwable.getMessage());
             }
         });
     }
