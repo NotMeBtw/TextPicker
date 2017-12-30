@@ -2,8 +2,8 @@ package com.example.user.project;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -31,13 +31,14 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
 
 public class MainActivity extends AppCompatActivity {
 
     TextView textView;
     ImageView imageView;
     ProgressBar progressBar;
-    Button btpic, btnup;
+    Button buttonShoot, buttonPick;
     private Uri fileUri;
     String picturePath;
     Uri selectedImage;
@@ -53,32 +54,33 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-//        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
-//        setSupportProgressBarIndeterminateVisibility(false);
-
         progressBar = (ProgressBar) findViewById(R.id.progress_spinner);
         progressBar.setVisibility(View.INVISIBLE);
 
         textView = (TextView) findViewById(R.id.textView);
         imageView = (ImageView) findViewById(R.id.imageView);
 
-        btpic = (Button) findViewById(R.id.button);
-        btpic.setOnClickListener(new View.OnClickListener() {
+        buttonShoot = (Button) findViewById(R.id.buttonShoot);
+        buttonShoot.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View view) {
-                clickpic();
+                shoot();
             }
         });
-
+        buttonPick = (Button) findViewById(R.id.buttonPick);
+        buttonPick.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pick();
+            }
+        });
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu.
-        // Adds items to the action bar if it is present.
+
         getMenuInflater().inflate(R.menu.menu, menu);
 
-        // Access the Share Item defined in menu XML
         MenuItem shareItem = menu.findItem(R.id.menu_item_share);
 
         try {
@@ -87,21 +89,17 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        // Create an Intent to share your content
         setShareIntent();
         return true;
     }
 
     private void setShareIntent() {
 
-        // create an Intent with the contents of the TextView
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setType("text/plain");
         shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Text recognition");
         shareIntent.putExtra(Intent.EXTRA_TEXT, textView.getText());
 
-        // Make sure the provider knows
-        // it should work with that Intent
         try {
             mShareActionProvider.setShareIntent(shareIntent);
         } catch (Exception e) {
@@ -109,8 +107,55 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void shoot() {
+        if (getApplicationContext().getPackageManager().hasSystemFeature(
+                PackageManager.FEATURE_CAMERA)) {
+            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri);
+
+            startActivityForResult(intent, 0);
+        } else {
+            Toast.makeText(getApplication(), "Camera not supported", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void pick() {
+        Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        startActivityForResult(intent, 1);
+    }
+
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode == RESULT_OK) {
+
+            selectedImage = data.getData();
+            if (requestCode == 0) {
+                photo = (Bitmap) data.getExtras().get("data");
+            }
+            if (requestCode == 1) {
+                try {
+                    photo = BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage));
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+//            String[] filePathColumn = {MediaStore.Images.Media.DATA};
+//            Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
+//            if (cursor != null) {
+//                cursor.moveToFirst();
+//            }
+//
+//            int columnIndex = cursor != null ? cursor.getColumnIndex(filePathColumn[0]) : 0;
+//            picturePath = cursor != null ? cursor.getString(columnIndex) : null;
+//            if (cursor != null) {
+//                cursor.close();
+//            }
+
+            imageView.setImageBitmap(photo);
+            upload(photo);
+        }
+    }
+
     private void upload(Bitmap photo) {
-        // Image location URL
         Log.e("path", "----------------" + picturePath);
 
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
@@ -121,17 +166,12 @@ public class MainActivity extends AppCompatActivity {
 
         Log.e("base64", "-----" + ba1);
 
-        // Upload image to server
         uploadPhoto();
 
     }
 
     private void uploadPhoto() {
-        // Create a client to perform networking
         AsyncHttpClient client = new AsyncHttpClient();
-
-        // 11. start progress bar
-//        setProgressBarIndeterminateVisibility(true);
 
         progressBar.setVisibility(View.VISIBLE);
 
@@ -145,8 +185,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(JSONObject jsonObject) {
 
-//                setProgressBarIndeterminateVisibility(false);
-
                 progressBar.setVisibility(View.INVISIBLE);
 
                 Toast.makeText(getApplicationContext(), "Success!", Toast.LENGTH_LONG).show();
@@ -154,15 +192,18 @@ public class MainActivity extends AppCompatActivity {
                 String response = "";
                 try {
                     JSONArray regions = jsonObject.getJSONArray("regions");
-                    JSONObject jo = regions.getJSONObject(0);
-                    JSONArray lines = jo.getJSONArray("lines");
-                    for (int i = 0; i < lines.length(); i++) {
-                        JSONObject line = lines.getJSONObject(i);
-                        JSONArray words = line.getJSONArray("words");
-                        for (int j = 0; j < words.length(); j++) {
-                            JSONObject word = words.getJSONObject(j);
-                            String text = word.getString("text");
-                            response += text + " ";
+                    for (int i = 0; i < regions.length(); i++) {
+                        if (i > 0) response += "\n";
+                        JSONObject region = regions.getJSONObject(i);
+                        JSONArray lines = region.getJSONArray("lines");
+                        for (int j = 0; j < lines.length(); j++) {
+                            JSONObject line = lines.getJSONObject(j);
+                            JSONArray words = line.getJSONArray("words");
+                            for (int k = 0; k < words.length(); k++) {
+                                JSONObject word = words.getJSONObject(k);
+                                String text = word.getString("text");
+                                response += text + " ";
+                            }
                         }
                     }
                 } catch (JSONException e) {
@@ -176,8 +217,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onFailure(int statusCode, Throwable throwable, JSONObject error) {
 
-//                setProgressBarIndeterminateVisibility(false);
-
                 progressBar.setVisibility(View.INVISIBLE);
 
                 Toast.makeText(getApplicationContext(), "Error: " + statusCode + " " + throwable.getMessage(), Toast.LENGTH_LONG).show();
@@ -185,43 +224,5 @@ public class MainActivity extends AppCompatActivity {
                 Log.e("HTTP POST ERROR", statusCode + " " + throwable.getMessage());
             }
         });
-    }
-
-    private void clickpic() {
-        if (getApplicationContext().getPackageManager().hasSystemFeature(
-                PackageManager.FEATURE_CAMERA)) {
-            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri);
-
-            startActivityForResult(intent, 100);
-        } else {
-            Toast.makeText(getApplication(), "Camera not supported", Toast.LENGTH_LONG).show();
-        }
-    }
-
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == 100 && resultCode == RESULT_OK) {
-
-            selectedImage = data.getData();
-            photo = (Bitmap) data.getExtras().get("data");
-
-            String[] filePathColumn = {MediaStore.Images.Media.DATA};
-            Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
-            if (cursor != null) {
-                cursor.moveToFirst();
-            }
-
-            int columnIndex = cursor != null ? cursor.getColumnIndex(filePathColumn[0]) : 0;
-            picturePath = cursor != null ? cursor.getString(columnIndex) : null;
-            if (cursor != null) {
-                cursor.close();
-            }
-
-            Bitmap photo = (Bitmap) data.getExtras().get("data");
-            ImageView imageView = (ImageView) findViewById(R.id.imageView);
-            imageView.setImageBitmap(photo);
-
-            upload(photo);
-        }
     }
 }
