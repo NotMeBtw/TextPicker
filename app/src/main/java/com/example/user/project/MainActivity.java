@@ -10,7 +10,6 @@ import android.provider.MediaStore;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.ShareActionProvider;
-import android.util.Base64;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -39,11 +38,9 @@ public class MainActivity extends AppCompatActivity {
     ImageView imageView;
     ProgressBar progressBar;
     Button buttonShoot, buttonPick;
-    private Uri fileUri;
-    String picturePath;
+    Uri fileUri;
     Uri selectedImage;
     Bitmap photo;
-    String ba1;
     byte[] ba;
     ShareActionProvider mShareActionProvider;
     public static String URL = "https://westeurope.api.cognitive.microsoft.com/vision/v1.0/ocr";
@@ -128,46 +125,36 @@ public class MainActivity extends AppCompatActivity {
         if (resultCode == RESULT_OK) {
 
             selectedImage = data.getData();
-            if (requestCode == 0) {
-                photo = (Bitmap) data.getExtras().get("data");
+            try {
+                photo = BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
             }
-            if (requestCode == 1) {
-                try {
-                    photo = BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage));
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                }
-            }
-//            String[] filePathColumn = {MediaStore.Images.Media.DATA};
-//            Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
-//            if (cursor != null) {
-//                cursor.moveToFirst();
-//            }
+
+//                String[] filePathColumn = {MediaStore.Images.Media.DATA};
+//                Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
+//                if (cursor != null) {
+//                    cursor.moveToFirst();
+//                }
 //
-//            int columnIndex = cursor != null ? cursor.getColumnIndex(filePathColumn[0]) : 0;
-//            picturePath = cursor != null ? cursor.getString(columnIndex) : null;
-//            if (cursor != null) {
-//                cursor.close();
-//            }
+//                int columnIndex = cursor != null ? cursor.getColumnIndex(filePathColumn[0]) : 0;
+//                picturePath = cursor != null ? cursor.getString(columnIndex) : null;
+//                if (cursor != null) {
+//                    cursor.close();
+//                }
 
             imageView.setImageBitmap(photo);
-            upload(photo);
+            upload();
         }
     }
 
-    private void upload(Bitmap photo) {
-        Log.e("path", "----------------" + picturePath);
-
+    private void upload() {
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
         photo = Bitmap.createScaledBitmap(photo, photo.getWidth(), photo.getHeight(), true);
         photo.compress(Bitmap.CompressFormat.JPEG, 100, bao);
         ba = bao.toByteArray();
-        ba1 = Base64.encodeToString(ba, Base64.DEFAULT);
-
-        Log.e("base64", "-----" + ba1);
 
         uploadPhoto();
-
     }
 
     private void uploadPhoto() {
