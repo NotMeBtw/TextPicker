@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Text Recognizer</string>
+    <string name="app_name">Text Picker</string>
     <string name="image">image</string>
     <string name="take_a_photo">Take a photo of text you want to save or pick it from gallery</string>
     <string name="pick_from_gallery">Pick from gallery</string>
